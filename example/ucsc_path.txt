@@ -1,0 +1,4 @@
+./example/augustusGene.txt
+./example/ensGene.txt	./example/ensemblToGeneName.txt
+./example/ncbiRefSeq.txt	./example/ncbiRefSeqToGeneName.txt
+./example/genscan.txt

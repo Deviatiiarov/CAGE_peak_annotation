@@ -1,0 +1,1 @@
+./example/Entrez_gene_galGal6.bed	./example/Entrez_gene_galGal6_names.txt

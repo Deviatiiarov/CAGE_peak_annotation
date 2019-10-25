@@ -1,6 +1,8 @@
 #!/bin/bash
 
 # cut -f2,13 ./example/ncbiRefSeq.txt > ./example/ncbiRefSeqToGeneName.txt
+# for i in *.txt; do cut -f2,13 $i > ${i%.txt*}_ToGeneName.txt; done
+
 # awk 'BEGIN{OFS="\t"};{print $4, $4}'  ./example/Entrez_gene_galGal6.bed > ./example/Entrez_gene_galGal6_names.txt
 # echo -e ./example/augustusGene.txt'\n'./example/ensGene.txt'\t'./example/ensemblToGeneName.txt'\n'./example/ncbiRefSeq.txt'\t'./example/ncbiRefSeqToGeneName.txt'\n'./example/genscan.txt > ./example/ucsc_path.txt
 # echo -e ./example/Entrez_gene_galGal6.bed'\t'./example/Entrez_gene_galGal6_names.txt > ./example/bed_path.txt
@@ -23,10 +25,11 @@ usage() {
 	echoerr "  ${0##/} OPTIONS -c FILE -u FILE -b FILE -o PATH"
 	echoerr
 	echoerr "Required:"
-    echoerr "  [-c PATH]     A single BED6 file for CAGE clusters"
+    echoerr "  [-c PATH]     A single BED file for CAGE clusters,"
+	echoerr "                where column 7 is TSS position"
 	echoerr "  [-u PATH]     A single file with paths to ucsc files"
 	echoerr "  [-o PATH]     Path where to put the output files"
-	echoerr "  [-b BED]      A single file with paths to BED6 files"
+	echoerr "  [-b BED]      A single file with paths to BED files"
 	echoerr
 	echoerr "  -u and -b files could be a tab separated files with two"
     echoerr "  columns, where second column provides paths to transcripts"
@@ -118,7 +121,7 @@ echoerr ${final_array[@]}
 MAX=$(echo ${final_array[*]}| tr " " "\n" | sort -n | tail -n 1)
 echoerr $MAX
 
-awk 'BEGIN{OFS="\t"};{$2=$7;$3=$7+1; print}' $CAGE_BED > ${TEMP}CAGE_1bp_BED.txt # change DPI tab to 1 bp size!
+awk 'BEGIN{OFS="\t"};{$2=$7+0;$3=$7+1; print}' $CAGE_BED > ${TEMP}CAGE_1bp_BED.txt # change DPI tab to 1 bp size!
 awk 'BEGIN{OFS="\t"};{$2=$7-50;$3=$7+50; print}' $CAGE_BED | sort -k1,1 -k2,2n | awk '$2>0'  > ${TEMP}CAGE_100bp_BED.txt
 CAGE_BED_DIM=$(awk '{print NF}' $CAGE_BED | sort -nu | tail -n 1)
 echoerr $CAGE_BED_DIM
@@ -219,8 +222,10 @@ done;
 fi
 
 #echoerr $( wc -l ${OPATH}${CAGE_BED_OUT%.bed*}_annotated.txt)
+echoerr "intersect done"
 
-if [ "$(awk 'NF==2' $FILES | wc -l )" > 0 ] || [ "$(awk 'NF==2' $BED | wc -l )" > 0  != "" ]; then
+if [[ ( $FILES != ""  &&  $(awk 'NF==2' $FILES | wc -l) > 0 ) || ( $BED != ""  &&  $(awk 'NF==2' $BED | wc -l) > 0) ]]; then
+
 Annotated_DIM=$(awk '{print NF}' ${OPATH}${CAGE_BED_OUT%.bed*}_annotated.txt | sort -nu | tail -n 1)
 
 for ann in ${TEMP}*_GeneName.txt; do
@@ -235,13 +240,14 @@ Annotated_DIM2=$((Annotated_DIM+number_of_ann))      ###########################
 cut -f $((Annotated_DIM+1))-$Annotated_DIM2 ${OPATH}${CAGE_BED_OUT%.bed*}_annotated.txt | sed 's/\t/;/g' | sed -e 's/\(;\)*$//g' |   awk 'BEGIN{OFS="\t"};{gsub(".*;","")};{print $0}' > ${TEMP}Annotation_tmp.txt
 cut -f 1-$Annotated_DIM ${OPATH}${CAGE_BED_OUT%.bed*}_annotated.txt > ${TEMP}Annotation_tmp2.txt # 
 paste -d '\t' ${TEMP}Annotation_tmp2.txt ${TEMP}Annotation_tmp.txt > ${OPATH}${CAGE_BED_OUT%.bed*}_annotated.txt
-
+echoerr "gene name"
 #echoerr $( wc -l ${OPATH}${CAGE_BED_OUT%.bed*}_annotated.txt)
-fi
+else :
+fi; 
 
 ##################################
 
-
+echoerr "end"
 for i in ${TEMP}*_50bp_CAGEpeaks.txt; do
  cut -f1 $i >> ${TEMP}Pos_TSS_id.txt;
 done
